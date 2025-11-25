@@ -1,0 +1,10 @@
+# Backend Requirements
+fastapi
+uvicorn
+pydantic
+python-dotenv
+
+# openai
+# diffusers
+# torch
+# pillow
