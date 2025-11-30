@@ -12,6 +12,9 @@ import json
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
+import requests as http_requests
+import base64
+from io import BytesIO
 
 # Load environment variables
 load_dotenv()
@@ -97,8 +100,61 @@ Guidelines:
 
 @app.post("/generate")
 async def generate_image(request: GenerateImageRequest):
-    # Implement Stable Diffusion integration
-    pass
+    """Generate an image using local Stable Diffusion with diffusers"""
+    try:
+        from diffusers import StableDiffusionPipeline
+        import torch
+        
+        print(f"Loading Stable Diffusion model (this may take a minute on first run)...")
+        
+        # Load a smaller, faster model (~1.7GB instead of 4GB)
+        model_id = "segmind/small-sd"  # Faster, smaller alternative
+        
+        # Check if CUDA (GPU) is available, otherwise use CPU
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Using device: {device}")
+        
+        # Load pipeline with appropriate dtype
+        if device == "cuda":
+            pipe = StableDiffusionPipeline.from_pretrained(
+                model_id,
+                torch_dtype=torch.float16,
+                safety_checker=None  # Disable for faster generation
+            )
+        else:
+            pipe = StableDiffusionPipeline.from_pretrained(
+                model_id,
+                safety_checker=None
+            )
+        
+        pipe = pipe.to(device)
+        
+        print(f"Generating image with prompt: {request.prompt[:50]}...")
+        
+        # Generate image
+        image = pipe(
+            prompt=request.prompt,
+            num_inference_steps=request.steps or 30,
+            guidance_scale=request.cfg_scale or 7.5
+        ).images[0]
+        
+        # Convert PIL image to base64
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        image_bytes = buffered.getvalue()
+        image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+        
+        print(f"Image generated successfully!")
+        return {
+            "image": image_base64,
+            "prompt": request.prompt,
+            "style": request.style
+        }
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Image generation error: {str(e)}")
 
 @app.get("/styles")
 async def get_styles():

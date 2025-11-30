@@ -1,8 +1,11 @@
 import streamlit as st
 import requests
 from typing import List
-
-# Backend URL (adjust if needed)
+import base64
+from io import BytesIO
+from PIL import Image
+  
+# Backend URL 
 BACKEND_URL = "http://127.0.0.1:8000"
 
 
@@ -26,6 +29,13 @@ def enhance_prompt(prompt: str, style: str) -> dict:
 	return res.json()
 
 
+def generate_image(prompt: str, style: str) -> dict:
+	payload = {"prompt": prompt, "style": style}
+	res = requests.post(f"{BACKEND_URL}/generate", json=payload, timeout=600)  # 10 minutes max
+	res.raise_for_status()
+	return res.json()
+
+
 def main():
 	st.set_page_config(page_title="GenArt Studio — Frontend", layout="centered")
 	st.title("GenArt Studio")
@@ -39,22 +49,50 @@ def main():
 	with col2:
 		style = st.selectbox("Style", styles)
 
-	if st.button("Enhance Prompt"):
-		if not prompt.strip():
-			st.error("Please enter a prompt first.")
-		else:
-			try:
-				with st.spinner("Enhancing prompt with the backend..."):
-					result = enhance_prompt(prompt, style)
-				enhanced = result.get("enhanced_prompt") or ""
-				st.success("Prompt enhanced")
-				st.subheader("Enhanced Prompt")
-				st.code(enhanced)
-				# also show original and style
-				st.write("**Original:**", prompt)
-				st.write("**Style:**", style)
-			except requests.exceptions.RequestException as e:
-				st.error(f"API request failed: {e}")
+	col_btn1, col_btn2 = st.columns(2)
+	
+	with col_btn1:
+		if st.button("Enhance Prompt"):
+			if not prompt.strip():
+				st.error("Please enter a prompt first.")
+			else:
+				try:
+					with st.spinner("Enhancing prompt with the backend..."):
+						result = enhance_prompt(prompt, style)
+					enhanced = result.get("enhanced_prompt") or ""
+					st.success("Prompt enhanced")
+					st.subheader("Enhanced Prompt")
+					st.code(enhanced)
+					st.write("**Original:**", prompt)
+					st.write("**Style:**", style)
+				except requests.exceptions.RequestException as e:
+					st.error(f"API request failed: {e}")
+	
+	with col_btn2:
+		if st.button("Generate Image", type="primary"):
+			if not prompt.strip():
+				st.error("Please enter a prompt first.")
+			else:
+				try:
+					with st.spinner("Generating image (first time: downloading smaller model ~2GB, may take 3-5 min. After: ~20 sec)..."):
+						result = generate_image(prompt, style)
+					
+					# Decode base64 image
+					image_b64 = result.get("image")
+					if image_b64:
+						image_bytes = base64.b64decode(image_b64)
+						image = Image.open(BytesIO(image_bytes))
+						
+						st.success("Image generated!")
+						st.image(image, caption=f"Generated: {prompt[:50]}...", use_container_width=True)
+						st.write("**Prompt used:**", result.get("prompt"))
+						st.write("**Style:**", result.get("style"))
+					else:
+						st.error("No image returned from backend")
+				except requests.exceptions.RequestException as e:
+					st.error(f"Image generation failed: {e}")
+				except Exception as e:
+					st.error(f"Error displaying image: {e}")
 
 
 if __name__ == "__main__":
