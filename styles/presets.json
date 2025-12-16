@@ -1,0 +1,64 @@
+{
+  "styles": [
+    {
+      "name": "Digital Art",
+      "description": "Modern digital artwork with vibrant colors"
+    },
+    {
+      "name": "Oil Painting",
+      "description": "Classic oil painting style with rich textures"
+    },
+    {
+      "name": "Photorealistic",
+      "description": "Highly detailed, photo-like quality"
+    },
+    {
+      "name": "Anime",
+      "description": "Japanese animation style"
+    },
+    {
+      "name": "Watercolor",
+      "description": "Soft, flowing watercolor aesthetic"
+    },
+    {
+      "name": "Sketch",
+      "description": "Hand-drawn pencil sketch style"
+    },
+    {
+      "name": "3D Render",
+      "description": "Computer-generated 3D graphics"
+    },
+    {
+      "name": "Cinematic",
+      "description": "Movie-quality dramatic lighting and composition"
+    },
+    {
+      "name": "Abstract",
+      "description": "Non-representational artistic style"
+    },
+    {
+      "name": "Minimalist",
+      "description": "Simple, clean design with minimal elements"
+    },
+    {
+      "name": "Cartoon",
+      "description": "Fun, exaggerated cartoon style"
+    },
+    {
+      "name": "Black and White",
+      "description": "Monochrome, grayscale aesthetic"
+    },
+    {
+      "name": "Futuristic",
+      "description": "Sci-fi, high-tech, cyberpunk style"
+    },
+    {
+      "name": "Vintage",
+      "description": "Retro, nostalgic, aged appearance"
+    },
+    {
+      "name": "Fantasy",
+      "description": "Magical, mythical, dreamlike quality"
+    }
+  ]
+}

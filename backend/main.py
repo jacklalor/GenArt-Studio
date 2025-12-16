@@ -120,6 +120,9 @@ async def generate_demo_image(request: GenerateImageRequest):
     
     print(f"Generating demo image with prompt: {request.prompt[:50]}...")
     
+    # Apply style to colors if specified
+    style_lower = (request.style or "").lower()
+    
     # Create a colorful gradient image (512x512)
     width, height = 512, 512
     image = Image.new('RGB', (width, height))
@@ -129,20 +132,38 @@ async def generate_demo_image(request: GenerateImageRequest):
     seed = hash(request.prompt) % 1000
     random.seed(seed)
     
-    # Create gradient background
-    for y in range(height):
-        r = int(255 * (y / height) * random.uniform(0.5, 1.0))
-        g = int(255 * (1 - y / height) * random.uniform(0.5, 1.0))
-        b = random.randint(100, 200)
-        draw.rectangle([(0, y), (width, y + 1)], fill=(r, g, b))
+    # Adjust colors based on style
+    if "black and white" in style_lower or "monochrome" in style_lower:
+        # Grayscale gradient
+        for y in range(height):
+            gray = int(255 * (y / height))
+            draw.rectangle([(0, y), (width, y + 1)], fill=(gray, gray, gray))
+    elif "futuristic" in style_lower or "cyberpunk" in style_lower:
+        # Neon colors (cyan, magenta, purple)
+        for y in range(height):
+            r = int(255 * (y / height) * random.uniform(0.3, 0.8))
+            g = int(100 * (1 - y / height) * random.uniform(0.5, 1.0))
+            b = random.randint(150, 255)
+            draw.rectangle([(0, y), (width, y + 1)], fill=(r, g, b))
+    else:
+        # Default colorful gradient
+        for y in range(height):
+            r = int(255 * (y / height) * random.uniform(0.5, 1.0))
+            g = int(255 * (1 - y / height) * random.uniform(0.5, 1.0))
+            b = random.randint(100, 200)
+            draw.rectangle([(0, y), (width, y + 1)], fill=(r, g, b))
     
-    # Add some random shapes for variety
-    for _ in range(5):
-        x = random.randint(0, width)
-        y = random.randint(0, height)
-        size = random.randint(30, 100)
-        color = (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
-        draw.ellipse([x, y, x + size, y + size], fill=color, outline=None)
+    # Add some random shapes for variety (skip for black and white)
+    if "black and white" not in style_lower:
+        for _ in range(5):
+            x = random.randint(0, width)
+            y = random.randint(0, height)
+            size = random.randint(30, 100)
+            if "futuristic" in style_lower:
+                color = (random.randint(0, 255), random.randint(200, 255), random.randint(200, 255))
+            else:
+                color = (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
+            draw.ellipse([x, y, x + size, y + size], fill=color, outline=None)
     
     # Add prompt text overlay
     try:
@@ -189,6 +210,31 @@ async def generate_stable_diffusion_image(request: GenerateImageRequest):
     
     print(f"Loading Stable Diffusion model...")
     
+    # Apply style to prompt if specified
+    prompt = request.prompt
+    if request.style and request.style != "None":
+        # Add style modifiers to the prompt
+        style_modifiers = {
+            "Black and White": ", black and white, monochrome, grayscale",
+            "Futuristic": ", futuristic, sci-fi, cyberpunk, neon lights, high-tech",
+            "Cartoon": ", cartoon style, animated, fun, colorful illustration",
+            "Vintage": ", vintage, retro, aged, nostalgic, old photograph",
+            "Fantasy": ", fantasy art, magical, mystical, dreamlike",
+            "Cinematic": ", cinematic lighting, dramatic, movie quality",
+            "Anime": ", anime style, japanese animation",
+            "Watercolor": ", watercolor painting, soft colors, artistic",
+            "Oil Painting": ", oil painting, classic art style, rich textures",
+            "Photorealistic": ", photorealistic, highly detailed, 8k, professional photography",
+            "Abstract": ", abstract art, non-representational",
+            "Minimalist": ", minimalist, simple, clean design",
+            "3D Render": ", 3D render, CGI, computer graphics",
+            "Digital Art": ", digital art, vibrant colors, modern",
+            "Sketch": ", pencil sketch, hand-drawn, artistic"
+        }
+        modifier = style_modifiers.get(request.style, f", {request.style} style")
+        prompt = prompt + modifier
+        print(f"Applied style '{request.style}' to prompt")
+    
     # Use smallest available model
     model_id = "segmind/small-sd"  # ~1.7GB
     
@@ -215,10 +261,11 @@ async def generate_stable_diffusion_image(request: GenerateImageRequest):
     pipe.enable_attention_slicing()
     
     print(f"Generating AI image (this will take ~60-120 seconds)...")
+    print(f"Using prompt: {prompt}")
     
     # Generate smaller image with fewer steps to reduce memory
     image = pipe(
-        prompt=request.prompt,
+        prompt=prompt,  # Use the style-modified prompt
         num_inference_steps=15,  # Reduced from 30 to save memory/time
         guidance_scale=7.5,
         height=384,  # Smaller than default 512

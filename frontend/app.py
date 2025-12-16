@@ -38,6 +38,11 @@ def generate_image(prompt: str, style: str, model: str) -> dict:
 
 def main():
 	st.set_page_config(page_title="GenArt Studio — Frontend", layout="centered")
+	
+	# Initialize session state for image history
+	if 'history' not in st.session_state:
+		st.session_state.history = []
+	
 	st.title("GenArt Studio")
 
 	st.write("Simple prototype: enter a short description and hit Enhance.")
@@ -92,6 +97,14 @@ def main():
 						image_bytes = base64.b64decode(image_b64)
 						image = Image.open(BytesIO(image_bytes))
 						
+						# Add to history
+						st.session_state.history.insert(0, {
+							'image_bytes': image_bytes,
+							'prompt': result.get("prompt"),
+							'style': result.get("style"),
+							'model': model
+						})
+						
 						st.success("Image generated!")
 						st.image(image, caption=f"Generated: {prompt[:50]}...", use_container_width=True)
 						
@@ -111,6 +124,39 @@ def main():
 					st.error(f"Image generation failed: {e}")
 				except Exception as e:
 					st.error(f"Error displaying image: {e}")
+	
+	# Gallery section
+	if st.session_state.history:
+		st.divider()
+		st.subheader("📸 Generation History")
+		
+		# Add clear history button
+		col_left, col_right = st.columns([3, 1])
+		with col_right:
+			if st.button("🗑️ Clear History"):
+				st.session_state.history = []
+				st.rerun()
+		
+		# Display images in a grid (3 columns)
+		cols_per_row = 3
+		for i in range(0, len(st.session_state.history), cols_per_row):
+			cols = st.columns(cols_per_row)
+			for j in range(cols_per_row):
+				idx = i + j
+				if idx < len(st.session_state.history):
+					item = st.session_state.history[idx]
+					with cols[j]:
+						img = Image.open(BytesIO(item['image_bytes']))
+						st.image(img, use_container_width=True)
+						st.caption(f"**{item['prompt'][:40]}...**")
+						st.caption(f"Style: {item['style']} | Model: {item['model']}")
+						st.download_button(
+							label="⬇️",
+							data=item['image_bytes'],
+							file_name=f"genart_{idx}.png",
+							mime="image/png",
+							key=f"download_{idx}"
+						)
 
 
 if __name__ == "__main__":
