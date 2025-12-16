@@ -29,8 +29,8 @@ def enhance_prompt(prompt: str, style: str) -> dict:
 	return res.json()
 
 
-def generate_image(prompt: str, style: str) -> dict:
-	payload = {"prompt": prompt, "style": style}
+def generate_image(prompt: str, style: str, model: str) -> dict:
+	payload = {"prompt": prompt, "style": style, "model": model}
 	res = requests.post(f"{BACKEND_URL}/generate", json=payload, timeout=600)  # 10 minutes max
 	res.raise_for_status()
 	return res.json()
@@ -43,11 +43,16 @@ def main():
 	st.write("Simple prototype: enter a short description and hit Enhance.")
 
 	styles = fetch_styles()
-	col1, col2 = st.columns([3, 1])
+	col1, col2, col3 = st.columns([3, 1, 1])
 	with col1:
 		prompt = st.text_area("Prompt", value="A serene landscape with mountains and a river", height=140)
 	with col2:
 		style = st.selectbox("Style", styles)
+	with col3:
+		model = st.selectbox("Model", [
+			"demo",
+			"stable-diffusion"
+		], help="Demo: Instant placeholder\nStable Diffusion: Real AI (slow, 60-120s)")
 
 	col_btn1, col_btn2 = st.columns(2)
 	
@@ -74,8 +79,12 @@ def main():
 				st.error("Please enter a prompt first.")
 			else:
 				try:
-					with st.spinner("Generating image (first time: downloading smaller model ~2GB, may take 3-5 min. After: ~20 sec)..."):
-						result = generate_image(prompt, style)
+					if model == "demo":
+						with st.spinner("Generating demo image (instant)..."):
+							result = generate_image(prompt, style, model)
+					else:
+						with st.spinner("Generating AI image (60-120 seconds, uses ~4GB RAM)..."):
+							result = generate_image(prompt, style, model)
 					
 					# Decode base64 image
 					image_b64 = result.get("image")
@@ -85,6 +94,15 @@ def main():
 						
 						st.success("Image generated!")
 						st.image(image, caption=f"Generated: {prompt[:50]}...", use_container_width=True)
+						
+						# Add download button
+						st.download_button(
+							label="⬇️ Download Image",
+							data=image_bytes,
+							file_name=f"genart_{prompt[:30].replace(' ', '_')}.png",
+							mime="image/png"
+						)
+						
 						st.write("**Prompt used:**", result.get("prompt"))
 						st.write("**Style:**", result.get("style"))
 					else:
