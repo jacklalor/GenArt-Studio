@@ -1,10 +1,11 @@
-# Backend Requirements
-fastapi
-uvicorn
-pydantic
-python-dotenv
-
-# openai
-# diffusers
-# torch
-# pillow
+# GenArt Studio - Backend Dependencies
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+openai>=1.0.0
+diffusers>=0.24.0
+torch>=2.0.0
+transformers>=4.35.0
+accelerate
+pillow>=10.0.0
